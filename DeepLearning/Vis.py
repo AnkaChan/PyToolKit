@@ -5,7 +5,7 @@ import itertools
 
 def visualizeImgsAndLabel(imgs, labels, gridW=10, gridH=10, shuffle=True, cmap='gray', figTitle=None, outFile=None, outDPI=300, closeExistingFigures=False):
     if closeExistingFigures:
-        matplotlib.pyplot.close("all")
+        plt.close("all")
     fig, axs = plt.subplots(gridH, gridW)
     fig.set_size_inches(20*gridW/10, 20*gridH/10)
     padSize = 100
@@ -19,7 +19,8 @@ def visualizeImgsAndLabel(imgs, labels, gridW=10, gridH=10, shuffle=True, cmap='
         img = imgs[imgId, ...]
         # pProj = testgtset[i * gridW + j, :]
         axs[i, j].imshow(np.squeeze(img), cmap=cmap)
-        axs[i, j].set_title( labels[imgId])
+        if labels is not None:
+            axs[i, j].set_title( labels[imgId])
         axs[i, j].axis('off')
 
     if figTitle is not None:
@@ -27,3 +28,17 @@ def visualizeImgsAndLabel(imgs, labels, gridW=10, gridH=10, shuffle=True, cmap='
 
     if outFile is not None:
         fig.savefig(outFile, dpi=outDPI, transparent=True, bbox_inches='tight', pad_inches=0)
+
+def drawErrCurves(x, y, saveFile=None, title='', xlabel='Epoch', ylabel='Error', closeExistingFigures=False):
+    if closeExistingFigures:
+        plt.close("all")
+
+    fig, ax = plt.subplots()
+    ax.plot(x, y)
+
+    ax.set(xlabel=xlabel, ylabel=ylabel,
+           title=title)
+    ax.grid()
+
+    if saveFile is not None:
+        fig.savefig(saveFile)
