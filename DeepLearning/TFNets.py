@@ -7,6 +7,8 @@ from os.path import join
 
 class CNNConfig():
     def __init__(s):
+        s.networkName = None
+
         s.lrDecayStep = None
         s.lrDecayRate = None
         s.momentum = None
@@ -65,9 +67,19 @@ class CNNClassifier():
         s.optimizer = s.getOptimizer()
 
         s.sess = tf.Session()
+        s.saver = tf.train.Saver()
 
         s.init = tf.global_variables_initializer()
         s.sess.run(s.init)
+
+        s.actualIEpoch=0
+
+        s.trainInfo = {
+            'trainLoss':[],
+            'trainAcc':[],
+            'testAcc':[],
+            'IEpoch':[]
+        }
 
     def predict(self, sess, imgs, batchSize = 200, calculateMeanLoss=False, labels=None):
         numBatchs = int(np.ceil(imgs.shape[0] / batchSize))
@@ -109,20 +121,27 @@ class CNNClassifier():
             accuracy = np.count_nonzero(predictionsAll==np.argmax(labels, axis=1)) / predictionsAll.shape[0]
             return predictionsAll, accuracy
 
-    def train(s, imgsTrain, labelTrain, imgsTest, labelTest, showTqdmBar=False, updateFrequency=0.1):
-        timeStart = time.clock()
+    def getSaveName(s, iEpoch):
+        return "{:s}_Epoch_{:8d}.ckpt".format(s.cfg.networkName, iEpoch)
+
+    def saveCheckPoint(s, saveFileName):
+        save_path = s.saver.save(s.sess, saveFileName)
+        print("Model saved in path: %s" % save_path)
+
+    def getInfoStr(s, epochNum, trainAcc, trainLoss, testAcc, learningRate):
+        "Epoch: {:3d}, Train Acc: {:f}, Train Loss: {:f}, Test Acc: {:f}, LR: {:f}, time {:05.2f}".format(
+            epochNum, trainAcc, trainLoss, testAcc, learningRate,
+            time.clock() - s.timeStart
+        )
+
+    def train(s, imgsTrain, labelTrain, imgsTest, labelTest, showTqdmBar=False, updateFrequency=0.1, useActualNumEpoch=False):
+        s.timeStart = time.clock()
         learningRateDecay = s.cfg.learningRate
         loss = -1
 
         sizeTrain = len(imgsTrain)
         numBatchs = int(np.ceil(sizeTrain / s.cfg.batchSize))
 
-        trainInfo = {
-            'trainLoss':[],
-            'trainAcc':[],
-            'testAcc':[],
-            'IEpoch':[]
-        }
         for iEpoch in range(0, s.cfg.numEpoch):
             # np.random.shuffle(indices)
             if showTqdmBar:
@@ -139,45 +158,49 @@ class CNNClassifier():
                     loss = s.sess.run(s.loss, trainDict)
                     learningRateDecay = s.sess.run(s.rate, feed_dict=trainDict)
                     t.set_description("Epoch_{:05d}_Loss:{:6f}_LR{:.8f}:".format(iEpoch, loss, s.sess.run(s.rate, feed_dict=trainDict)), refresh=True)
+            s.actualIEpoch += 1
 
+            if useActualNumEpoch:
+                epochNum = s.actualIEpoch
+            else:
+                epochNum = iEpoch
 
-            if not iEpoch % s.cfg.printIEpochStep:
+            if not epochNum % s.cfg.printIEpochStep:
 
                 predictionsTrain, trainAcc, trainLoss = s.evaluate(s.sess, imgsTrain, labelTrain,
                                                                      batchSize=s.cfg.batchSize, calculateMeanLoss=True, )
                 # for quick debugging predictionsTrain, trainAcc, trainLoss = cnn.evaluate(sess, imgsTrain[:batchSize,...], labelTrain[:batchSize,...], batchSize=batchSize, calculateMeanLoss=True)
                 predictionsTest, testAcc = s.evaluate(s.sess, imgsTest, labelTest, batchSize=s.cfg.batchSize)
 
-
-                infoStr = "Epoch: {:3d}, Train Acc: {:f}, Train Loss: {:f}, Test Acc: {:f}, LR: {:f}, time {:05.2f}".format(
-                    iEpoch, trainAcc, trainLoss, testAcc, s.sess.run(s.rate, feed_dict=trainDict),
-                    time.clock() - timeStart
-                )
+                infoStr = s.getInfoStr(epochNum, trainAcc, trainLoss, testAcc, s.sess.run(s.rate, feed_dict=trainDict))
                 print(infoStr)
 
-                trainInfo['trainLoss'].append(trainLoss)
-                trainInfo['trainAcc'].append(trainAcc)
-                trainInfo['testAcc'].append(testAcc)
-                trainInfo['IEpoch'].append(iEpoch)
+                s.trainInfo['trainLoss'].append(trainLoss)
+                s.trainInfo['trainAcc'].append(trainAcc)
+                s.trainInfo['testAcc'].append(testAcc)
+                s.trainInfo['IEpoch'].append(epochNum)
 
-
-            if not iEpoch % s.cfg.plotStep:
+            if not epochNum % s.cfg.plotStep:
                 predictionsTest, testAcc = s.evaluate(s.sess, imgsTest, labelTest, batchSize=s.cfg.batchSize)
                 predictionsTestText = s.labelsToText(predictionsTest,)
                 visualizeImgsAndLabel(imgsTest, predictionsTestText,
-                                      outFile=join(s.cfg.infoOutFolder, 'PredTest_Epoch{:05d}.pdf'.format(iEpoch)),
+                                      outFile=join(s.cfg.infoOutFolder, 'PredTest_Epoch{:05d}.pdf'.format(epochNum)),
                                       closeExistingFigures=True)
 
                 predictionsTrain, trainAcc, trainLoss = s.evaluate(s.sess, imgsTrain, labelTrain,
                                                                      batchSize=s.cfg.batchSize, calculateMeanLoss=True, )
                 predictionsTrainText = s.labelsToText(predictionsTrain, )
                 visualizeImgsAndLabel(imgsTrain, predictionsTrainText,
-                                      outFile=join(s.cfg.infoOutFolder, 'PredTrain_Epoch{:05d}.pdf'.format(iEpoch)),
+                                      outFile=join(s.cfg.infoOutFolder, 'PredTrain_Epoch{:05d}.pdf'.format(epochNum)),
                                       closeExistingFigures=True)
 
-                drawErrCurves(trainInfo['IEpoch'], trainInfo['trainLoss'], xlabel='Epoch', ylabel='Train Loss', saveFile=join(s.cfg.infoOutFolder, 'TrainLoss.pdf'))
-                drawErrCurves(trainInfo['IEpoch'], trainInfo['trainAcc'], xlabel='Epoch', ylabel='Train Accuracy', saveFile=join(s.cfg.infoOutFolder, 'TrainAccuracy.pdf'))
-                drawErrCurves(trainInfo['IEpoch'], trainInfo['testAcc'], xlabel='Epoch', ylabel='Test Accuracy', saveFile=join(s.cfg.infoOutFolder, 'TestAccuracy.pdf'))
+                drawErrCurves(s.trainInfo['IEpoch'], s.trainInfo['trainLoss'], xlabel='Epoch', ylabel='Train Loss', saveFile=join(s.cfg.infoOutFolder, 'TrainLoss.pdf'))
+                drawErrCurves(s.trainInfo['IEpoch'], s.trainInfo['trainAcc'], xlabel='Epoch', ylabel='Train Accuracy', saveFile=join(s.cfg.infoOutFolder, 'TrainAccuracy.pdf'))
+                drawErrCurves(s.trainInfo['IEpoch'], s.trainInfo['testAcc'], xlabel='Epoch', ylabel='Test Accuracy', saveFile=join(s.cfg.infoOutFolder, 'TestAccuracy.pdf'))
+
+            if not epochNum % s.cfg.saveStep and epochNum:
+                outFile = join(s.cfg.ckpSaveFolder, s.getSaveName(epochNum))
+                s.saveCheckPoint(outFile)
 
 
     def runTrainStep(s, batchImgs, batchLabels):
