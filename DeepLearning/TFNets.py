@@ -129,10 +129,12 @@ class CNNClassifier():
         print("Model saved in path: %s" % save_path)
 
     def getInfoStr(s, epochNum, trainAcc, trainLoss, testAcc, learningRate):
-        "Epoch: {:3d}, Train Acc: {:f}, Train Loss: {:f}, Test Acc: {:f}, LR: {:f}, time {:05.2f}".format(
+        info = "Epoch: {:3d}, Train Acc: {:f}, Train Loss: {:f}, Test Acc: {:f}, LR: {:f}, time {:05.2f}".format(
             epochNum, trainAcc, trainLoss, testAcc, learningRate,
             time.clock() - s.timeStart
         )
+
+        return info
 
     def train(s, imgsTrain, labelTrain, imgsTest, labelTest, showTqdmBar=False, updateFrequency=0.1, useActualNumEpoch=False):
         s.timeStart = time.clock()
