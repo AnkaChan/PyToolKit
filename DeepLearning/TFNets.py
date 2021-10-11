@@ -129,14 +129,14 @@ class CNNClassifier():
         print("Model saved in path: %s" % save_path)
 
     def getInfoStr(s, epochNum, trainAcc, trainLoss, testAcc, learningRate):
-        info = "Epoch: {:3d}, Train Acc: {:f}, Train Loss: {:f}, Test Acc: {:f}, LR: {:f}, time {:05.2f}".format(
+        info = "Epoch: {:3d}, Train Acc: {:f}, Train Loss: {:f}, Test Acc: {:f}, LR: {:e}, time {:05.2f}".format(
             epochNum, trainAcc, trainLoss, testAcc, learningRate,
             time.clock() - s.timeStart
         )
 
         return info
 
-    def train(s, imgsTrain, labelTrain, imgsTest, labelTest, showTqdmBar=False, updateFrequency=0.1, useActualNumEpoch=False):
+    def train(s, imgsTrain, labelTrain, imgsTest, labelTest, showTqdmBar=False, updateFrequency=0.1, useActualNumEpoch=True):
         s.timeStart = time.clock()
         learningRateDecay = s.cfg.learningRate
         loss = -1
@@ -144,7 +144,7 @@ class CNNClassifier():
         sizeTrain = len(imgsTrain)
         numBatchs = int(np.ceil(sizeTrain / s.cfg.batchSize))
 
-        for iEpoch in range(0, s.cfg.numEpoch):
+        while iEpoch < s.cfg.numEpoch:
             # np.random.shuffle(indices)
             if showTqdmBar:
                 t = tqdm.trange(numBatchs, desc="Epoch_{:05d}_Loss:{:6f}_LR{:.8f}:".format(iEpoch, loss, learningRateDecay), leave=True)
@@ -160,7 +160,6 @@ class CNNClassifier():
                     loss = s.sess.run(s.loss, trainDict)
                     learningRateDecay = s.sess.run(s.rate, feed_dict=trainDict)
                     t.set_description("Epoch_{:05d}_Loss:{:6f}_LR{:.8f}:".format(iEpoch, loss, s.sess.run(s.rate, feed_dict=trainDict)), refresh=True)
-            s.actualIEpoch += 1
 
             if useActualNumEpoch:
                 epochNum = s.actualIEpoch
@@ -204,6 +203,7 @@ class CNNClassifier():
                 outFile = join(s.cfg.ckpSaveFolder, s.getSaveName(epochNum))
                 s.saveCheckPoint(outFile)
 
+            s.actualIEpoch += 1
 
     def runTrainStep(s, batchImgs, batchLabels):
         trainDict = {
