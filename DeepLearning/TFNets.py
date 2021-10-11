@@ -144,7 +144,7 @@ class CNNClassifier():
         sizeTrain = len(imgsTrain)
         numBatchs = int(np.ceil(sizeTrain / s.cfg.batchSize))
 
-        while iEpoch < s.cfg.numEpoch:
+        for iEpoch in range(s.cfg.numEpoch):
             # np.random.shuffle(indices)
             if showTqdmBar:
                 t = tqdm.trange(numBatchs, desc="Epoch_{:05d}_Loss:{:6f}_LR{:.8f}:".format(iEpoch, loss, learningRateDecay), leave=True)
