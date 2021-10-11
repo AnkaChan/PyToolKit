@@ -17,3 +17,11 @@ def randomPermuteData(imgs, labels):
     labels = labels[randomIndices, ...]
 
     return imgs, labels
+
+def toOneHot(labels, numClasses=None):
+    if numClasses is None:
+        numClasses = np.max(labels) + 1
+    oneHone = np.zeros((labels.size, numClasses))
+    oneHone[np.arange(labels.size), labels] = 1
+
+    return oneHone
