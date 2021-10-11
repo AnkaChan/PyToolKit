@@ -1,3 +1,7 @@
+import OpenEXR
+import Imath, array
+import numpy as np
+
 def readEXR(inFile, toUint8=True, withDepth=True, turnToSRGB=True):
     file = OpenEXR.InputFile(inFile)
 
