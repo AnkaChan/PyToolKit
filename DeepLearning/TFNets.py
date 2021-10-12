@@ -61,7 +61,7 @@ class CNNClassifier():
         s.rate=None
         return "Optimizer"
 
-    def initialize(s):
+    def initialize(s, chptPath=None):
         s.logits, s.softmaxes = s.getNetwork()
         s.loss = s.getLoss()
         s.optimizer = s.getOptimizer()
@@ -70,7 +70,11 @@ class CNNClassifier():
         s.saver = tf.train.Saver()
 
         s.init = tf.global_variables_initializer()
-        s.sess.run(s.init)
+        if chptPath is None:
+            s.sess.run(s.init)
+        else:
+            s.saver.restore(s.sess, chptPath)
+
 
         s.actualIEpoch=0
 
