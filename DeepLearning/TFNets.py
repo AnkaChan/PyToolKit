@@ -159,7 +159,7 @@ class CNNClassifier():
                 if showTqdmBar and  np.random.rand() < updateFrequency:
                     loss = s.sess.run(s.loss, trainDict)
                     learningRateDecay = s.sess.run(s.rate, feed_dict=trainDict)
-                    t.set_description("Epoch_{:05d}_Loss:{:6f}_LR{:.8f}:".format(iEpoch, loss, s.sess.run(s.rate, feed_dict=trainDict)), refresh=True)
+                    t.set_description("Epoch_{:05d}_Loss:{:6f}_LR{:e}:".format(iEpoch, loss, s.sess.run(s.rate, feed_dict=trainDict)), refresh=True)
             s.actualIEpoch += 1
 
             if useActualNumEpoch:
