@@ -1,11 +1,13 @@
 import os
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import numpy as np
 import time
 import tqdm
 from .Vis import *
 from os.path import join
+from .Logger import configLogger
 
 class CNNConfig():
     def __init__(s):
@@ -26,8 +28,9 @@ class CNNConfig():
 
         s.infoOutFolder=None
         s.ckpSaveFolder=None
+        s.batch_norm_momentum=None
 
-class BaseNetwork():
+class BaseNetworkTF2():
     def __init__(s, inputShape=None, labelShape=None, cfg=CNNConfig(), resetDefaultGraph=True):
         if resetDefaultGraph:
             tf.reset_default_graph()
@@ -45,7 +48,8 @@ class BaseNetwork():
         s.lrDecayRatePH = tf.placeholder(tf.float32, name="lrDecayRatePH")
 
         s.weight_decay = tf.placeholder(tf.float32, None, name='weight_decay')
-        s.regularizer = tf.contrib.layers.l2_regularizer(scale=s.weight_decay)
+        s.batch_norm_momentum = tf.placeholder(tf.float32, None, name='batch_norm_momentum')
+        # s.regularizer = tf.contrib.layers.l2_regularizer(scale=s.weight_decay)
 
         s.optimizer = None
 
@@ -74,7 +78,7 @@ class BaseNetwork():
         else:
             s.saver.restore(s.sess, chptPath)
 
-
+        s.logger = configLogger(join(s.cfg.infoOutFolder, 'Logs.txt'))
 
         s.actualIEpoch=0
 
@@ -118,6 +122,7 @@ class BaseNetwork():
             s.weight_decay: s.cfg.weight_decay,
             s.lrDecayRatePH: s.cfg.lrDecayRate,
             s.lrDecayStepPH: s.cfg.lrDecayStep,
+            s.batch_norm_momentum: s.cfg.batch_norm_momentum,
             s.is_training: True
         }
         return  trainDict
@@ -203,7 +208,7 @@ class BaseNetwork():
                 predictionsTest, testAcc = s.evaluate(s.sess, imgsTest, labelTest, batchSize=s.cfg.batchSize)
 
                 infoStr = s.getInfoStr(epochNum, trainAcc, trainLoss, testAcc, s.sess.run(s.rate, feed_dict=trainDict))
-                print(infoStr)
+                s.logger.info(infoStr)
 
                 s.trainInfo['trainLoss'].append(trainLoss)
                 s.trainInfo['trainAcc'].append(trainAcc)
@@ -233,79 +238,3 @@ class BaseNetwork():
                 s.saveCheckPoint(outFile)
 
             s.actualIEpoch += 1
-
-class BaseCNNClassifier(BaseNetwork):
-    def __init__(s, inputShape=None, labelShape=None, cfg=CNNConfig(), resetDefaultGraph=True):
-        super().__init__(inputShape, labelShape, cfg, resetDefaultGraph)
-        s.logits = None
-        s.softmaxes = None
-        s.loss = None
-
-    def initialize(s, chptPath=None):
-        s.getNetwork()
-        s.loss = s.getLoss()
-        s.optimizer = s.getOptimizer()
-
-        s.sess = tf.Session()
-        s.saver = tf.train.Saver()
-
-        s.init = tf.global_variables_initializer()
-        if chptPath is None:
-            s.sess.run(s.init)
-        else:
-            s.saver.restore(s.sess, chptPath)
-        s.actualIEpoch=0
-
-        s.trainInfo = {
-            'trainLoss':[],
-            'trainAcc':[],
-            'testAcc':[],
-            'IEpoch':[]
-        }
-
-    def getNetwork(s):
-        s.logits = None
-        s.softmaxes = None
-
-    def predict(s, sess, imgs, batchSize = 200, calculateMeanLoss=False, labels=None):
-        numBatchs = int(np.ceil(imgs.shape[0] / batchSize))
-
-        totalLoss = 0
-        predictionsAll = []
-        for iBatch in range(numBatchs):
-            batchData = imgs[iBatch * batchSize:(iBatch + 1) * batchSize, :, ... ]
-            feedDict = {
-                s.inputs: batchData,
-                s.is_training: False,
-            }
-
-            sfmx1a = sess.run(s.softmaxes, feed_dict=feedDict)
-            predict1a = np.argmax(sfmx1a, axis=1)
-            predictionsAll.append(predict1a)
-
-            if calculateMeanLoss:
-                feedDict[s.labels] = labels[iBatch * batchSize:(iBatch + 1) * batchSize, :, ]
-                totalLoss = totalLoss + sess.run(s.loss, feed_dict=feedDict) * batchData.shape[0]
-
-        predictionsAll = np.concatenate(predictionsAll, axis=0)
-
-        if calculateMeanLoss:
-            return predictionsAll, totalLoss/imgs.shape[0]
-        else:
-            return predictionsAll
-
-    def evaluate(s, sess, imgs, labels, batchSize=200, calculateMeanLoss=False):
-
-        if calculateMeanLoss:
-            predictionsAll, meanLoss = s.predict(sess, imgs, batchSize, calculateMeanLoss=calculateMeanLoss, labels=labels)
-
-            accuracy = np.count_nonzero(predictionsAll == np.argmax(labels, axis=1)) / predictionsAll.shape[0]
-            return predictionsAll, accuracy, meanLoss
-        else:
-            predictionsAll = s.predict(sess, imgs, batchSize)
-
-            accuracy = np.count_nonzero(predictionsAll==np.argmax(labels, axis=1)) / predictionsAll.shape[0]
-            return predictionsAll, accuracy
-
-
-
