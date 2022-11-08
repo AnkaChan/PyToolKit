@@ -7,6 +7,7 @@ from numpy.core.umath_tests import inner1d
 import numpy as np
 import tqdm
 
+
 def barycentric_coordinates_of_projection(p, q, u, v):
     """Given a point, gives projected coords of that point to a triangle
     in barycentric coordinates.
