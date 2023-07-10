@@ -2,6 +2,7 @@ import glob
 
 from ..Utility.Path import *
 import numpy as np
+import tqdm
 
 def renderFolder_trimesh(inFolder, extName='ply', outFolder=None, camera=None, resolution=[1920, 1080]):
     import trimesh
@@ -56,3 +57,90 @@ def renderFolder_trimesh(inFolder, extName='ply', outFolder=None, camera=None, r
 
         except BaseException as E:
             log.debug("unable to save image", str(E))
+
+
+
+def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False, stride = 1, fps=30, addFrameNumber=True,
+                         frameNumberPos='upper_left', camera=None, resolution=(1920, 1080), scalars=None, **kwargs):
+    import pyvista as pv
+    from pyvista import _vtk
+
+    corner_mappings = {
+        'lower_left': _vtk.vtkCornerAnnotation.LowerLeft,
+        'lower_right': _vtk.vtkCornerAnnotation.LowerRight,
+        'upper_left': _vtk.vtkCornerAnnotation.UpperLeft,
+        'upper_right': _vtk.vtkCornerAnnotation.UpperRight,
+        'lower_edge': _vtk.vtkCornerAnnotation.LowerEdge,
+        'upper_edge': _vtk.vtkCornerAnnotation.UpperEdge,
+        'left_edge': _vtk.vtkCornerAnnotation.LeftEdge,
+        'right_edge': _vtk.vtkCornerAnnotation.RightEdge,
+    }
+
+    if outFolder is None:
+        outFolder = join(inFolder, 'pyvista_rendering')
+    os.makedirs(outFolder, exist_ok=True)
+
+    inFiles = glob.glob(join(inFolder, "*." + extName))
+
+    mesh = pv.PolyData(inFiles[0])
+
+    # Distances normalized to [0, 2*pi]
+
+    yUpRot = np.array([[1, 0, 0],
+              [0, 0, 1],
+              [0, 1, 0],
+              ])
+
+    if yUpInput:
+        mesh.points = (yUpRot @ mesh.points.transpose()).transpose()
+
+    # Make the movie
+    pltr = pv.Plotter(window_size=resolution)
+    # pltr.set_focus([0, 0, 0])
+    # pltr.set_position([40, 0, 0])
+    if scalars is not None:
+        pltr.add_mesh(
+            mesh,
+            scalars=scalars[0],
+            smooth_shading=True,
+            specular=1,
+            cmap="nipy_spectral",
+            show_scalar_bar=False,
+            **kwargs
+        )
+    else:
+        pltr.add_mesh(
+            mesh,
+            scalars=None,
+            smooth_shading=True,
+            specular=1,
+            cmap="nipy_spectral",
+            show_scalar_bar=False,
+            **kwargs
+        )
+
+    pltr.open_movie(join(outFolder, 'vis.mp4'), framerate=fps)
+
+    if addFrameNumber:
+        p, n, e = filePart(inFiles[0])
+        txtHandle = pltr.add_text('Frame: ' + n, position=corner_mappings[frameNumberPos])
+
+    for iFrame in tqdm.tqdm(range(0, len(inFiles), stride)):
+        meshFile = inFiles[iFrame]
+
+        if scalars is not None:
+            pltr.update_scalars(scalars[iFrame], render=False)
+
+        meshNew = pv.PolyData(meshFile)
+        pointsNew = np.array(meshNew.points)
+        pointsNew = (yUpRot @ pointsNew.transpose()).transpose() if yUpInput else meshNew.points
+        pltr.update_coordinates(pointsNew, render=True)
+        # mesh.points = pointsNew
+        if addFrameNumber:
+            p, n, e = filePart(meshFile)
+            txtHandle.SetText(corner_mappings[frameNumberPos], 'Frame: ' + n)
+
+
+        pltr.write_frame()
+
+    pltr.show()
