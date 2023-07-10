@@ -61,7 +61,7 @@ def renderFolder_trimesh(inFolder, extName='ply', outFolder=None, camera=None, r
 
 
 def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False, stride = 1, fps=30, addFrameNumber=True,
-                         frameNumberPos='upper_left', camera=None, resolution=(1920, 1080), scalars=None, **kwargs):
+                         frameNumberPos='upper_left', camera=None, resolution=(1280,720), scalars=None, **kwargs):
     import pyvista as pv
     from pyvista import _vtk
 
@@ -143,4 +143,4 @@ def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False
 
         pltr.write_frame()
 
-    pltr.show()
+    # pltr.show()
