@@ -3,6 +3,8 @@ import glob
 from ..Utility.Path import *
 import numpy as np
 import tqdm
+import pyvista as pv
+
 
 def renderFolder_trimesh(inFolder, extName='ply', outFolder=None, camera=None, resolution=[1920, 1080]):
     import trimesh
@@ -58,7 +60,36 @@ def renderFolder_trimesh(inFolder, extName='ply', outFolder=None, camera=None, r
         except BaseException as E:
             log.debug("unable to save image", str(E))
 
+def renderMesh(points, faces, padFaces=True, resolution=(1920,2080), scalar=None, scalarFor="points"):
+    if padFaces:
+        facesPadded = []
 
+        for f in faces:
+            facesPadded.append([len(f)])
+            facesPadded[-1].extend([v[0] for v in f])
+        faces = facesPadded
+
+    mesh = pv.PolyData(np.array(points), faces)
+    renderPvMesh(mesh, resolution=resolution, scalar=None, scalarFor="points")
+
+def renderPvMesh(mesh, resolution=(1920,2080), scalar=None, scalarFor="points"):
+
+    pltr = pv.Plotter(window_size=resolution)
+    # pltr.set_focus([0, 0, 0])
+    # pltr.set_position([40, 0, 0])
+    pltr.add_mesh(
+        mesh,
+        scalars=scalar,
+        smooth_shading=True,
+        specular=1,
+        cmap="jet",
+        show_scalar_bar=False,
+        preference=scalarFor
+    )
+
+    # scalarFor "points" or "cells"
+
+    pltr.show()
 
 def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False, stride = 1, fps=30, addFrameNumber=True,
                          frameNumberPos='upper_left', camera=None, resolution=(1280,720), scalars=None, **kwargs):
