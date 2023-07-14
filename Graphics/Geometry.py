@@ -214,3 +214,47 @@ def searchForClosestPointsOnTriangleWithBarycentric(sourceVs, targetVs, targetFs
         return np.array(closestPts), np.array(barycentrics), np.array(trianglesId), dis
     else:
         return np.array(closestPts), np.array(barycentrics), np.array(trianglesId)
+
+
+class TriMeshAABBTree:
+    def __init__(s, Vs, Fs):
+        s.Vs = Vs
+        s.Fs = Fs
+        s.triangles = [Triangle_3(toP(Vs[f[0], :]), toP(Vs[f[1], :]), toP(Vs[f[2], :])) for f in
+                     Fs]
+        s.tree = AABB_tree_Triangle_3_soup(s.triangles)
+
+    def searchForClosestPointsOnTriangleWithBarycentric(s, sourceVs, returnDis=False):
+        closestPts = []
+        trianglesId = []
+
+        for i, v in tqdm.tqdm(enumerate(sourceVs), desc="Searching for closest points"):
+            # print("query for vertex: ", i)
+            # closestPts.append(fromP(tree.closest_point(toP(v))))
+            p, id = s.tree.closest_point_and_primitive(toP(v))
+
+            closestPts.append(fromP(p))
+            trianglesId.append(id)
+
+        barycentrics = []
+        for tId, p in zip(trianglesId, closestPts):
+            a = p
+            t = s.Fs[tId, :]
+            tp1 = s.Vs[t[0], :]
+            u = s.Vs[t[1], :] - tp1
+            v = s.Vs[t[2], :] - tp1
+            c = barycentric_coordinates_of_projection(a, tp1, u, v)
+            assert np.min(c) > -1e-6
+            assert np.sum(c) >= (1-1e-6)
+
+            barycentrics.append(c[0, :])
+
+        if returnDis:
+            closestPts = np.array(closestPts)
+            diff = sourceVs - closestPts
+            dis = np.sqrt(diff[:, 0] ** 2 + diff[:, 0] ** 2 + diff[:, 0] ** 3)
+
+            # closestPts, barycentrics, trianglesId, dis
+            return np.array(closestPts), np.array(barycentrics), np.array(trianglesId), dis
+        else:
+            return np.array(closestPts), np.array(barycentrics), np.array(trianglesId)
