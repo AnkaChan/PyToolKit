@@ -91,7 +91,7 @@ def renderPvMesh(mesh, resolution=(1920,2080), scalar=None, scalarFor="points"):
 
     pltr.show()
 
-def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False, stride = 1, fps=30, addFrameNumber=True,
+def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False, stride = 1, start=0, end=-1, fps=30, addFrameNumber=True,
                          frameNumberPos='upper_left', camera=None, resolution=(1280,720), scalars=None, **kwargs):
     import pyvista as pv
     from pyvista import _vtk
@@ -156,7 +156,8 @@ def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False
         p, n, e = filePart(inFiles[0])
         txtHandle = pltr.add_text('Frame: ' + n, position=corner_mappings[frameNumberPos])
 
-    for iFrame in tqdm.tqdm(range(0, len(inFiles), stride)):
+    endFrame = end if end >0 else len(inFiles)
+    for iFrame in tqdm.tqdm(range(start, endFrame, stride)):
         meshFile = inFiles[iFrame]
 
         if scalars is not None:
