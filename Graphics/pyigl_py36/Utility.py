@@ -7,7 +7,7 @@ from . import iglhelpers
 def sortedGlob(pathname):
     return sorted(glob.glob(pathname))
 
-def getLaplacian(meshFile, biLaplacian = False):
+def getLaplacian(meshFile, biLaplacian = False, sparse=False):
 
 
     extName = Path(meshFile).suffix
@@ -25,8 +25,11 @@ def getLaplacian(meshFile, biLaplacian = False):
     L = igl.eigen.SparseMatrixd()
 
     igl.cotmatrix(V, F, L)
+    LNP = - iglhelpers.e2p(L)
 
-    LNP = - iglhelpers.e2p(L).todense()
+    if not sparse:
+        LNP = LNP.todense()
+
     if biLaplacian:
         LNP = LNP @ LNP
 

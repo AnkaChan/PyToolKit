@@ -218,17 +218,32 @@ def searchForClosestPointsOnTriangleWithBarycentric(sourceVs, targetVs, targetFs
 
 class TriMeshAABBTree:
     def __init__(s, Vs, Fs):
-        s.Vs = Vs
-        s.Fs = Fs
+        s.Vs = np.array(Vs)
+        s.Fs = np.array(Fs)
         s.triangles = [Triangle_3(toP(Vs[f[0], :]), toP(Vs[f[1], :]), toP(Vs[f[2], :])) for f in
                      Fs]
         s.tree = AABB_tree_Triangle_3_soup(s.triangles)
+    def searchForClosestPointsOnTriangle(s, sourceVs, returnDis=False):
+        closestPts = []
+        trianglesId = []
+
+        # for i, v in tqdm.tqdm(enumerate(sourceVs), desc="Searching for closest points"):
+        for i, v in enumerate(sourceVs):
+            # print("query for vertex: ", i)
+            # closestPts.append(fromP(tree.closest_point(toP(v))))
+            p, id = s.tree.closest_point_and_primitive(toP(v))
+
+            closestPts.append(fromP(p))
+            trianglesId.append(id)
+
+        return np.array(closestPts)
 
     def searchForClosestPointsOnTriangleWithBarycentric(s, sourceVs, returnDis=False):
         closestPts = []
         trianglesId = []
 
-        for i, v in tqdm.tqdm(enumerate(sourceVs), desc="Searching for closest points"):
+        # for i, v in tqdm.tqdm(enumerate(sourceVs), desc="Searching for closest points"):
+        for i, v in tqdm.tqdm(enumerate(sourceVs), ):
             # print("query for vertex: ", i)
             # closestPts.append(fromP(tree.closest_point(toP(v))))
             p, id = s.tree.closest_point_and_primitive(toP(v))
