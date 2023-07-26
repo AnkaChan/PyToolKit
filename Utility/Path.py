@@ -10,13 +10,13 @@ def filePart(fPath):
 
 def globFolderWithExt(folder, ext, sort=False):
     if sort:
-        sorted(glob.glob(join(folder, "*."+ext)))
+        return sorted(glob.glob(join(folder, "*."+ext)))
     else:
         return glob.glob(join(folder, "*."+ext))
 
-def globFolderWithExtName(folder, name, sort=False):
+def globFolderWithName(folder, name, sort=False):
     if sort:
-        sorted(glob.glob(join(folder, name)))
+        return sorted(glob.glob(join(folder, name)))
     else:
         return glob.glob(join(folder, name))
 

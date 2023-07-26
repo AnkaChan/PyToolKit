@@ -87,3 +87,5 @@ def writeObj(vs, vns, vts, fs, outFile, withMtl=False, textureFile=None, convert
                     f.write(' {}'.format( '/'.join([str(fi) for fi in fis])))
             f.write('\n')
         f.close()
+
+
