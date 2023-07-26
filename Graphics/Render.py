@@ -92,7 +92,8 @@ def renderPvMesh(mesh, resolution=(1920,2080), scalar=None, scalarFor="points"):
     pltr.show()
 
 def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False, stride = 1, start=0, end=-1, fps=30, addFrameNumber=True,
-                         frameNumberPos='upper_left', camera=None, resolution=(1280,720), scalars=None, **kwargs):
+                         frameNumberPos='upper_left', camera=None, write=True, resolution=(1280,720), scalars=None, filePrefix='',
+                         waitForAdjustCamera=False, cycle=False, **kwargs):
     import pyvista as pv
     from pyvista import _vtk
 
@@ -111,7 +112,7 @@ def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False
         outFolder = join(inFolder, 'pyvista_rendering')
     os.makedirs(outFolder, exist_ok=True)
 
-    inFiles = glob.glob(join(inFolder, "*." + extName))
+    inFiles = glob.glob(join(inFolder, filePrefix + "*." + extName))
 
     mesh = pv.PolyData(inFiles[0])
 
@@ -150,13 +151,19 @@ def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False
             **kwargs
         )
 
-    pltr.open_movie(join(outFolder, 'vis.mp4'), framerate=fps)
+    if write:
+        pltr.open_movie(join(outFolder, 'vis.mp4'), framerate=fps)
+
+    # pltr.show(interactive_update=True, interactive=True, auto_close=False)
+    pltr.show(interactive_update=True,  auto_close=False)
 
     if addFrameNumber:
         p, n, e = filePart(inFiles[0])
         txtHandle = pltr.add_text('Frame: ' + n, position=corner_mappings[frameNumberPos])
 
     endFrame = end if end >0 else len(inFiles)
+    allFramePts = []
+    frameNames = []
     for iFrame in tqdm.tqdm(range(start, endFrame, stride)):
         meshFile = inFiles[iFrame]
 
@@ -171,8 +178,29 @@ def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False
         if addFrameNumber:
             p, n, e = filePart(meshFile)
             txtHandle.SetText(corner_mappings[frameNumberPos], 'Frame: ' + n)
+            if cycle:
+                frameNames.append(n)
 
+        if write:
+            pltr.write_frame()
+        else:
+            pltr.update()
 
-        pltr.write_frame()
+        if cycle:
+            allFramePts.append(pointsNew)
 
-    # pltr.show()
+    if cycle:
+        iFrame = 0
+        while not pltr._closed:
+            pltr.update_coordinates(allFramePts[iFrame], render=True)
+
+            if addFrameNumber:
+
+                txtHandle.SetText(corner_mappings[frameNumberPos], 'Frame: ' + frameNames[iFrame])
+
+            pltr.update()
+            iFrame = iFrame + 1
+            if iFrame >= len(allFramePts):
+                iFrame = 0
+
+    pltr.show()
