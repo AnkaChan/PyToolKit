@@ -134,7 +134,6 @@ def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False
         pltr.add_mesh(
             mesh,
             scalars=scalars[0],
-            smooth_shading=True,
             specular=1,
             cmap="nipy_spectral",
             show_scalar_bar=False,
@@ -144,7 +143,6 @@ def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False
         pltr.add_mesh(
             mesh,
             scalars=None,
-            smooth_shading=True,
             specular=1,
             cmap="nipy_spectral",
             show_scalar_bar=False,
