@@ -4,7 +4,7 @@ from ..Utility.Path import *
 import numpy as np
 import tqdm
 import pyvista as pv
-
+from functools import partial
 
 def renderFolder_trimesh(inFolder, extName='ply', outFolder=None, camera=None, resolution=[1920, 1080]):
     import trimesh
@@ -162,30 +162,50 @@ def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False
     endFrame = end if end >0 else len(inFiles)
     allFramePts = []
     frameNames = []
-    for iFrame in tqdm.tqdm(range(start, endFrame, stride)):
-        meshFile = inFiles[iFrame]
 
-        if scalars is not None:
-            pltr.update_scalars(scalars[iFrame], render=False)
+    class AnimationState:
+        def __init__(s):
+            s.i = start
+            s.start = False
 
-        meshNew = pv.PolyData(meshFile)
-        pointsNew = np.array(meshNew.points)
-        pointsNew = (yUpRot @ pointsNew.transpose()).transpose() if yUpInput else meshNew.points
-        pltr.update_coordinates(pointsNew, render=True)
-        # mesh.points = pointsNew
-        if addFrameNumber:
-            p, n, e = filePart(meshFile)
-            txtHandle.SetText(corner_mappings[frameNumberPos], 'Frame: ' + n)
+    def startAnimation(state):
+        state.start = True
+        print('Animation start.')
+    state = AnimationState()
+
+    pltr.add_key_event('a', partial(startAnimation, state=state))
+
+    # for iFrame in tqdm.tqdm(range(start, endFrame, stride)):
+    while state.i < endFrame:
+        if state.start:
+            meshFile = inFiles[state.i]
+
+            if scalars is not None:
+                pltr.update_scalars(scalars[state.i], render=False)
+
+            meshNew = pv.PolyData(meshFile)
+            pointsNew = np.array(meshNew.points)
+            pointsNew = (yUpRot @ pointsNew.transpose()).transpose() if yUpInput else meshNew.points
+            pltr.update_coordinates(pointsNew, render=True)
+            # mesh.points = pointsNew
+            if addFrameNumber:
+                p, n, e = filePart(meshFile)
+                txtHandle.SetText(corner_mappings[frameNumberPos], 'Frame: ' + n)
+                if cycle:
+                    frameNames.append(n)
+
+            if write:
+                pltr.write_frame()
+            else:
+                pltr.update()
+
             if cycle:
-                frameNames.append(n)
+                allFramePts.append(pointsNew)
 
-        if write:
-            pltr.write_frame()
+            state.i = state.i + stride
         else:
             pltr.update()
 
-        if cycle:
-            allFramePts.append(pointsNew)
 
     if cycle:
         iFrame = 0
