@@ -166,7 +166,7 @@ def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False
     class AnimationState:
         def __init__(s):
             s.i = start
-            s.start = False
+            s.start = not waitForAdjustCamera
 
     def startAnimation(state):
         state.start = True
