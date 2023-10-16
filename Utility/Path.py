@@ -2,6 +2,7 @@ import os.path
 from pathlib import Path
 from os.path import join
 import glob
+import tqdm
 
 def filePart(fPath):
     fp = Path(fPath)
