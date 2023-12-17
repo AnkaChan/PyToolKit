@@ -91,8 +91,11 @@ def renderPvMesh(mesh, resolution=(1920,2080), scalar=None, scalarFor="points"):
 
     pltr.show()
 
+'''
+camera must a dict: {"position": ***, "focal_point":***, "UP":***}
+'''
 def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False, stride = 1, start=0, end=-1, fps=30, addFrameNumber=True,
-                         frameNumberPos='upper_left', camera=None, write=True, resolution=(1280,720), scalars=None, filePrefix='',
+                         frameNumberPos='upper_left', camera=None, write=False, resolution=(1280,720), scalars=None, filePrefix='',
                          waitForAdjustCamera=False, cycle=False, **kwargs):
     import pyvista as pv
     from pyvista import _vtk
@@ -128,6 +131,16 @@ def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False
 
     # Make the movie
     pltr = pv.Plotter(window_size=resolution)
+
+    if camera is not None:
+        # print("position:", pltr.camera.position)
+        # print("focal_point :", pltr.camera.focal_point)
+        # print("up:", pltr.camera.up)
+
+        pltr.camera.position = camera["position"]
+        pltr.camera.focal_point = camera["focal_point"]
+        pltr.camera.up = camera["up"]
+
     # pltr.set_focus([0, 0, 0])
     # pltr.set_position([40, 0, 0])
     if scalars is not None:
@@ -169,11 +182,24 @@ def renderFolder_pyvista(inFolder, extName='ply', outFolder=None, yUpInput=False
             s.start = not waitForAdjustCamera
 
     def startAnimation(state):
-        state.start = True
-        print('Animation start.')
+        if state.start:
+            state.start = False
+            print('Animation stopped.')
+        else:
+            state.start = True
+            print('Animation start.')
+
+    def printCameraInfo():
+        # print(pltr.camera)
+        print("position:", pltr.camera.position)
+        print("focal_point :", pltr.camera.focal_point)
+        print("up:", pltr.camera.up)
+        # print("zoom:", pltr.camera.Zoom)
+
     state = AnimationState()
 
     pltr.add_key_event('a', partial(startAnimation, state=state))
+    pltr.add_key_event('c', printCameraInfo)
 
     # for iFrame in tqdm.tqdm(range(start, endFrame, stride)):
     while state.i < endFrame:
