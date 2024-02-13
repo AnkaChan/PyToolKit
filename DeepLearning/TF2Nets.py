@@ -29,9 +29,11 @@ class CNNConfig():
         s.infoOutFolder=None
         s.ckpSaveFolder=None
         s.batch_norm_momentum=None
+        s.max_to_keep = 100
+        s.keep_checkpoint_every_n_hours = 1
 
 class BaseNetworkTF2():
-    def __init__(s, inputShape=None, labelShape=None, cfg=CNNConfig(), resetDefaultGraph=True):
+    def __init__(s, inputShape=None, labelShape=None, cfg=CNNConfig(), resetDefaultGraph=True, inputType=tf.float32):
         if resetDefaultGraph:
             tf.reset_default_graph()
 
@@ -40,7 +42,13 @@ class BaseNetworkTF2():
         s.inputsShape = inputShape
         s.labelsShape = labelShape
 
-        s.inputs = tf.placeholder(tf.float32, shape=[None, *s.inputsShape], name='inputs')
+        if inputType == tf.uint8:
+            s.inputs = tf.placeholder(inputType, shape=[None, *s.inputsShape], name='inputs')
+            s.inputsScaled = tf.cast(s.inputs, dtype=tf.float32) / 255.0
+        else:
+            s.inputs = tf.placeholder(inputType, shape=[None, *s.inputsShape], name='inputs')
+            s.inputsScaled = s.inputs
+
         s.labels = tf.placeholder(tf.float32, shape=[None, *s.labelsShape], name='labels')
         s.is_training = tf.placeholder(tf.bool, None, name='is_training')
         s.learnrate_ph = tf.placeholder(tf.float32, name="learnrate_ph")
@@ -70,7 +78,7 @@ class BaseNetworkTF2():
         s.optimizer = s.getOptimizer()
 
         s.sess = tf.Session()
-        s.saver = tf.train.Saver()
+        s.saver = tf.train.Saver(max_to_keep=s.cfg.max_to_keep, keep_checkpoint_every_n_hours=s.cfg.keep_checkpoint_every_n_hours)
 
         s.init = tf.global_variables_initializer()
         if chptPath is None:
