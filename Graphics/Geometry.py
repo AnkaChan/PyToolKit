@@ -3,9 +3,10 @@ from CGAL.CGAL_Kernel import Triangle_3
 from CGAL.CGAL_Kernel import Ray_3
 from CGAL.CGAL_AABB_tree import AABB_tree_Triangle_3_soup
 from numpy import cross, sum, isscalar, spacing, vstack
-from numpy.core.umath_tests import inner1d
+# from numpy.core.umath_tests import inner1d
 import numpy as np
 import tqdm
+
 
 def barycentric_coordinates_of_projection(p, q, u, v):
     """Given a point, gives projected coords of that point to a triangle
@@ -15,7 +16,7 @@ def barycentric_coordinates_of_projection(p, q, u, v):
         at http://www.cs.ubc.ca/~heidrich/Papers/JGT.05.pdf
     :param p: point to project
     :param q: a vertex of the triangle to project into
-    :param u,v: edges of the the triangle such that it has vertices ``q``, ``q+u``, ``q+v``
+    :param u,v: edges of the triangle such that it has vertices ``q``, ``q+u``, ``q+v``
     :returns: barycentric coordinates of ``p``'s projection in triangle defined by ``q``, ``u``, ``v``
             vectorized so ``p``, ``q``, ``u``, ``v`` can all be ``3xN``
     """
@@ -61,9 +62,9 @@ def pointsToTriangles(points,triangles):
         # Calculate triangle edges
         e0 = p1-p0
         e1 = p2-p0
-        a = inner1d(e0,e0)
-        b = inner1d(e0,e1)
-        c = inner1d(e1,e1)
+        a = np.dot(e0,e0)
+        b = np.dot(e0,e1)
+        c = np.dot(e1,e1)
 
         # Calculate determinant and denominator
         det = a*c - b*b
@@ -72,8 +73,8 @@ def pointsToTriangles(points,triangles):
 
         # Project to the edges
         p  = p0-points[:,np.newaxis]
-        d = inner1d(e0,p)
-        e = inner1d(e1,p)
+        d = np.dot(e0,p)
+        e = np.dot(e1,p)
         u = b*e - c*d
         v = b*d - a*e
 
@@ -210,6 +211,65 @@ def searchForClosestPointsOnTriangleWithBarycentric(sourceVs, targetVs, targetFs
         dis = np.sqrt(diff[:, 0]**2 + diff[:, 0]**2 + diff[:, 0]**3)
 
         # closestPts, barycentrics, trianglesId, dis
-        return closestPts, np.array(barycentrics), np.array(trianglesId), dis
+        return np.array(closestPts), np.array(barycentrics), np.array(trianglesId), dis
     else:
         return np.array(closestPts), np.array(barycentrics), np.array(trianglesId)
+
+
+class TriMeshAABBTree:
+    def __init__(s, Vs, Fs):
+        s.Vs = np.array(Vs)
+        s.Fs = np.array(Fs)
+        s.triangles = [Triangle_3(toP(Vs[f[0], :]), toP(Vs[f[1], :]), toP(Vs[f[2], :])) for f in
+                     Fs]
+        s.tree = AABB_tree_Triangle_3_soup(s.triangles)
+    def searchForClosestPointsOnTriangle(s, sourceVs, returnDis=False):
+        closestPts = []
+        trianglesId = []
+
+        # for i, v in tqdm.tqdm(enumerate(sourceVs), desc="Searching for closest points"):
+        for i, v in enumerate(sourceVs):
+            # print("query for vertex: ", i)
+            # closestPts.append(fromP(tree.closest_point(toP(v))))
+            p, id = s.tree.closest_point_and_primitive(toP(v))
+
+            closestPts.append(fromP(p))
+            trianglesId.append(id)
+
+        return np.array(closestPts)
+
+    def searchForClosestPointsOnTriangleWithBarycentric(s, sourceVs, returnDis=False):
+        closestPts = []
+        trianglesId = []
+
+        # for i, v in tqdm.tqdm(enumerate(sourceVs), desc="Searching for closest points"):
+        for i, v in tqdm.tqdm(enumerate(sourceVs), ):
+            # print("query for vertex: ", i)
+            # closestPts.append(fromP(tree.closest_point(toP(v))))
+            p, id = s.tree.closest_point_and_primitive(toP(v))
+
+            closestPts.append(fromP(p))
+            trianglesId.append(id)
+
+        barycentrics = []
+        for tId, p in zip(trianglesId, closestPts):
+            a = p
+            t = s.Fs[tId, :]
+            tp1 = s.Vs[t[0], :]
+            u = s.Vs[t[1], :] - tp1
+            v = s.Vs[t[2], :] - tp1
+            c = barycentric_coordinates_of_projection(a, tp1, u, v)
+            assert np.min(c) > -1e-6
+            assert np.sum(c) >= (1-1e-6)
+
+            barycentrics.append(c[0, :])
+
+        if returnDis:
+            closestPts = np.array(closestPts)
+            diff = sourceVs - closestPts
+            dis = np.sqrt(diff[:, 0] ** 2 + diff[:, 0] ** 2 + diff[:, 0] ** 3)
+
+            # closestPts, barycentrics, trianglesId, dis
+            return np.array(closestPts), np.array(barycentrics), np.array(trianglesId), dis
+        else:
+            return np.array(closestPts), np.array(barycentrics), np.array(trianglesId)
