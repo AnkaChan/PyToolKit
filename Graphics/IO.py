@@ -36,7 +36,7 @@ def readObj(vt_path, idMinus1=True):
         objFile.close()
     return vs, vns, vts, fs
 
-def writeObj(vs, vns, vts, fs, outFile, withMtl=False, textureFile=None, convertToMM=False):
+def writeObj(vs, vns, vts, fs, outFile, withMtl=False, textureFile=None, convertToMM=False, vIdAdd1=True):
     # write new
     with open(outFile, 'w+') as f:
         fp = Path(outFile)
@@ -80,7 +80,11 @@ def writeObj(vs, vns, vts, fs, outFile, withMtl=False, textureFile=None, convert
             # if facesToPreserve is not None and iF not in facesToPreserve:
             #     continue
             f.write('f')
-            for fis in fs[iF]:
-                f.write(' {}'.format( '/'.join([str(fi) for fi in fis])))
+            if vIdAdd1:
+                for fis in fs[iF]:
+                    f.write(' {}'.format('/'.join([str(fi+1) for fi in fis])))
+            else:
+                for fis in fs[iF]:
+                    f.write(' {}'.format( '/'.join([str(fi) for fi in fis])))
             f.write('\n')
         f.close()

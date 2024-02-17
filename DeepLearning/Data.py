@@ -9,9 +9,12 @@ def randomlyPickDataIndices(numData, numSelection):
 
     return indices
 
-def randomPermuteData(imgs, labels):
+def randomPermuteData(imgs, labels, numSelection=None):
     assert imgs.shape[0] ==labels.shape[0], "length of images and labels does not match"
-    randomIndices = np.random.permutation(imgs.shape[0])
+    if numSelection is None:
+        randomIndices = np.random.permutation(imgs.shape[0])
+    else:
+        randomIndices = randomlyPickDataIndices(imgs.shape[0], numSelection)
 
     imgs = imgs[randomIndices, ...]
     labels = labels[randomIndices, ...]
