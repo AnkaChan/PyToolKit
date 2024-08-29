@@ -1,7 +1,7 @@
 from pathlib import Path
 from os.path import join
 
-def readObj(vt_path, idMinus1=True):
+def readObj(vt_path, idMinus1=True, convertFacesToOnlyPos=False):
     vts = []
     fs = []
     vns = []
@@ -31,6 +31,8 @@ def readObj(vt_path, idMinus1=True):
                         f = [int(fi[i])-1 for i in range(len(fi))]
                     else:
                         f = [int(fi[i]) for i in range(len(fi))]
+                    if convertFacesToOnlyPos:
+                        f = f[0]
                     fs_curr.append(f)
                 fs.append(fs_curr)
         objFile.close()
