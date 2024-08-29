@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 
 def buildOrthonormalBasisForTriangle(n, b1, b2):
     if n[2] < 0.:
@@ -37,4 +36,5 @@ def computeDeformationGradientTet_np(x1, x2, x3, x4):
 
 
 def computeDeformationGradientTet_torch(x1, x2, x3, x4):
+    import torch
     return torch.stack([x2-x1, x3 - x1, x4-x1], dim=1)
