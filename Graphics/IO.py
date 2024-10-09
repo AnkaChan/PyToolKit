@@ -1,5 +1,53 @@
 from pathlib import Path
 from os.path import join
+import re
+
+class PLYMesh:
+    def __init__(self, filename):
+        self.vertices = []
+        self.faces = []
+        self.parse_ply(filename)
+
+    def parse_ply(self, filename):
+        with open(filename, 'r') as file:
+            lines = file.readlines()
+
+        header_ended = False
+        vertex_count = 0
+        face_count = 0
+        vertex_section = False
+        face_section = False
+
+        for i, line in enumerate(lines):
+            line = line.strip()
+
+            if not header_ended:
+                if line.startswith("element vertex"):
+                    vertex_count = int(line.split()[-1])
+                    vertex_section = True
+                elif line.startswith("element face"):
+                    face_count = int(line.split()[-1])
+                    face_section = True
+                elif line == "end_header":
+                    header_ended = True
+                continue
+
+            if header_ended:
+                if vertex_count > 0:
+                    # Reading vertex lines
+                    vertex_data = list(map(float, line.split()))
+                    self.vertices.append(vertex_data)
+                    vertex_count -= 1
+                    if vertex_count == 0:
+                        vertex_section = False
+                elif face_count > 0 and vertex_section == False:
+                    # Reading face lines
+                    face_data = list(map(int, re.findall(r'\d+', line)))[
+                                1:]  # Skipping the first number which is the face size (e.g., 3 for triangles)
+                    self.faces.append(face_data)
+                    face_count -= 1
+                    if face_count == 0:
+                        face_section = False
 
 def readObj(vt_path, idMinus1=True, convertFacesToOnlyPos=False):
     vts = []
@@ -84,9 +132,16 @@ def writeObj(vs, vns, vts, fs, outFile, withMtl=False, textureFile=None, convert
             f.write('f')
             if vIdAdd1:
                 for fis in fs[iF]:
-                    f.write(' {}'.format('/'.join([str(fi+1) for fi in fis])))
+                    if  isinstance(fis, list):
+                        f.write(' {}'.format('/'.join([str(fi+1) for fi in fis])))
+                    else:
+                        f.write(' {}'.format(fis+1))
+
             else:
                 for fis in fs[iF]:
-                    f.write(' {}'.format( '/'.join([str(fi) for fi in fis])))
+                    if isinstance(fis, list):
+                        f.write(' {}'.format( '/'.join([str(fi) for fi in fis])))
+                    else:
+                        f.write(' {}'.format(fis))
             f.write('\n')
         f.close()
