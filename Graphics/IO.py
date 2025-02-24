@@ -58,6 +58,8 @@ def readObj(vt_path, idMinus1=True, convertFacesToOnlyPos=False):
         lines = objFile.readlines()
         for line in lines:
             l = line.split(' ')
+            if '' in l:
+                l.remove('')
             if l[0] == 'vt':
                 assert len(l) == 3
                 u = float(l[1])
