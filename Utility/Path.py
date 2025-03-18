@@ -7,6 +7,7 @@ import tqdm
 def filePart(fPath):
     fp = Path(fPath)
     _, ext = os.path.splitext(fPath)
+    ext = ext.replace('.', '')
     return  (fp.parent.absolute()), fp.stem, ext
 
 def globFolderWithExt(folder, ext, sort=False):

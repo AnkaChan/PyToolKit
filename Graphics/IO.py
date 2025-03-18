@@ -49,6 +49,35 @@ class PLYMesh:
                     if face_count == 0:
                         face_section = False
 
+def write_ply(vertices, faces, out_path):
+    """
+    Writes a PLY file from given vertices and faces.
+
+    Parameters:
+    vertices (numpy.ndarray): Nx3 array of vertex coordinates.
+    faces (numpy.ndarray): Mx3 array of face indices.
+    out_path (str): Output file path.
+    """
+    with open(out_path, 'w') as ply_file:
+        # PLY Header
+        ply_file.write("ply\n")
+        ply_file.write("format ascii 1.0\n")
+        ply_file.write(f"element vertex {len(vertices)}\n")
+        ply_file.write("property float x\n")
+        ply_file.write("property float y\n")
+        ply_file.write("property float z\n")
+        ply_file.write(f"element face {len(faces)}\n")
+        ply_file.write("property list uchar int vertex_indices\n")
+        ply_file.write("end_header\n")
+
+        # Write vertices
+        for v in vertices:
+            ply_file.write(f"{v[0]} {v[1]} {v[2]}\n")
+
+        # Write faces
+        for f in faces:
+            ply_file.write(f"3 {f[0]} {f[1]} {f[2]}\n")
+
 def readObj(vt_path, idMinus1=True, convertFacesToOnlyPos=False):
     vts = []
     fs = []
